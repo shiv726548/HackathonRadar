@@ -1,0 +1,136 @@
+<?php
+require_once 'config.php';
+require_admin();
+
+$error = '';
+$editItem = null;
+$editType = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    check_csrf();
+    $action = $_POST['action'] ?? '';
+    $type = $_POST['type'] ?? '';
+
+    try {
+        $table = opportunity_table($type);
+
+        if ($action === 'delete') {
+            $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+            if ($id) {
+                $stmt = $db->prepare("DELETE FROM $table WHERE id = ?");
+                $stmt->bind_param('i', $id);
+                $stmt->execute();
+            }
+            header('Location: admin.php');
+            exit;
+        }
+
+        if ($action === 'save') {
+            $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+            $title = trim($_POST['title'] ?? '');
+            $organizer = trim($_POST['organizer'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $deadline = trim($_POST['deadline'] ?? '');
+            $prize = trim($_POST['prize'] ?? '');
+            $url = trim($_POST['registration_url'] ?? '');
+
+            $date = DateTime::createFromFormat('Y-m-d', $deadline);
+            if ($title === '' || $organizer === '' || $description === '' ||
+                !$date || $date->format('Y-m-d') !== $deadline ||
+                !filter_var($url, FILTER_VALIDATE_URL) ||
+                !in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
+                $error = 'Complete all required fields. Use a valid date and an http or https registration URL.';
+            } else {
+                if ($id) {
+                    $stmt = $db->prepare("UPDATE $table SET title=?, organizer=?, description=?, deadline=?, prize=?, registration_url=? WHERE id=?");
+                    $stmt->bind_param('ssssssi', $title, $organizer, $description, $deadline, $prize, $url, $id);
+                } else {
+                    $stmt = $db->prepare("INSERT INTO $table (title, organizer, description, deadline, prize, registration_url) VALUES (?, ?, ?, ?, ?, ?)");
+                    $stmt->bind_param('ssssss', $title, $organizer, $description, $deadline, $prize, $url);
+                }
+                $stmt->execute();
+                header('Location: admin.php');
+                exit;
+            }
+        }
+    } catch (InvalidArgumentException $e) {
+        $error = 'Choose a valid opportunity type.';
+    }
+}
+
+if (isset($_GET['edit'], $_GET['type'])) {
+    $editType = $_GET['type'];
+    try {
+        $table = opportunity_table($editType);
+        $id = filter_input(INPUT_GET, 'edit', FILTER_VALIDATE_INT);
+        if ($id) {
+            $stmt = $db->prepare("SELECT * FROM $table WHERE id = ?");
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $editItem = $stmt->get_result()->fetch_assoc();
+        }
+    } catch (InvalidArgumentException $e) {
+        $editItem = null;
+    }
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save' && $error !== '') {
+    $editType = $_POST['type'] ?? 'hackathon';
+    $editItem = $_POST;
+    $editItem['id'] = $_POST['id'] ?? '';
+}
+
+render_header('Admin');
+?>
+<section class="page-intro">
+    <p class="eyebrow">Administrator area</p>
+    <h1>Manage opportunities</h1>
+    <p>Signed in as <?= h($_SESSION['user_name']) ?>.</p>
+</section>
+
+<section class="form-panel wide-panel">
+    <h2><?= !empty($editItem['id']) ? 'Edit opportunity' : 'Add an opportunity' ?></h2>
+    <?php if ($error): ?><p class="notice notice-error"><?= h($error) ?></p><?php endif; ?>
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+        <input type="hidden" name="action" value="save">
+        <input type="hidden" name="id" value="<?= h($editItem['id'] ?? '') ?>">
+        <label>Type
+            <select name="type">
+                <option value="hackathon" <?= ($editType ?: ($editItem['type'] ?? '')) === 'hackathon' ? 'selected' : '' ?>>Hackathon</option>
+                <option value="competition" <?= ($editType ?: ($editItem['type'] ?? '')) === 'competition' ? 'selected' : '' ?>>Competition</option>
+            </select>
+        </label>
+        <label>Title<input name="title" maxlength="180" required value="<?= h($editItem['title'] ?? '') ?>"></label>
+        <label>Organizer<input name="organizer" maxlength="150" required value="<?= h($editItem['organizer'] ?? '') ?>"></label>
+        <label>Description<textarea name="description" rows="4" required><?= h($editItem['description'] ?? '') ?></textarea></label>
+        <label>Deadline<input type="date" name="deadline" required value="<?= h($editItem['deadline'] ?? '') ?>"></label>
+        <label>Prize (optional)<input name="prize" maxlength="150" value="<?= h($editItem['prize'] ?? '') ?>"></label>
+        <label>Registration URL<input type="url" name="registration_url" required value="<?= h($editItem['registration_url'] ?? '') ?>"></label>
+        <button class="button" type="submit">Save opportunity</button>
+        <?php if (!empty($editItem['id'])): ?><a class="button button-secondary" href="admin.php">Cancel edit</a><?php endif; ?>
+    </form>
+</section>
+
+<?php foreach (['hackathon' => 'Hackathons', 'competition' => 'Competitions'] as $type => $heading): ?>
+    <section class="section">
+        <h2><?= h($heading) ?></h2>
+        <div class="admin-list">
+            <?php foreach (get_opportunities($db, $type) as $item): ?>
+                <article class="admin-row">
+                    <div><strong><?= h($item['title']) ?></strong><p class="muted"><?= h($item['deadline']) ?> · <?= h($item['organizer']) ?></p></div>
+                    <div class="button-row">
+                        <a class="button button-secondary" href="admin.php?edit=<?= (int)$item['id'] ?>&amp;type=<?= h($type) ?>">Edit</a>
+                        <form method="post" onsubmit="return confirm('Delete this opportunity?');">
+                            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="type" value="<?= h($type) ?>">
+                            <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
+                            <button class="button button-danger" type="submit">Delete</button>
+                        </form>
+                    </div>
+                </article>
+            <?php endforeach; ?>
+        </div>
+    </section>
+<?php endforeach; ?>
+<?php render_footer(); ?>

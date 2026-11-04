@@ -1,0 +1,138 @@
+vendor/
+.DS_Store
+*.log
+
+# Local environment
+.env
+
+# Windows-specific files
+Thumbs.db
+
+# IDE/editor folders
+.vscode/
+.idea/
+
+# OS-generated files
+Desktop.ini
+
+# PHP caches
+*.cache
+
+# Build artifacts
+/dist/
+/build/
+
+# Local database exports
+a.sql
+
+# Optional: ignore generated zip files if you don't want them tracked
+*.zip
+
+# Keep repo clean from temporary editor files
+*~
+
+# Node or other package manager artifacts (not used here but harmless)
+node_modules/
+
+# Generated session files if any appear locally
+sessions/
+
+# Custom local upload files
+uploads/
+
+# Ignore test output directories if added later
+coverage/
+
+# Composer (not used in this project, but safe)
+composer.lock
+composer.phar
+
+# Ignore local phpMyAdmin dumps if created in repo root
+*.sql.gz
+
+# Keep none of the asset source images in case they are downloaded locally
+assets/images/
+
+# ignore compiled or temp backups
+*.bak
+backup/
+
+# ignore any local project-specific config
+config.local.php
+
+# ignore common PHP debug logs
+php_errors.log
+
+# ignore hidden editor configs
+*.swp
+*.swo
+
+# ignore Windows shell files
+desktop.ini
+
+# ignore temporary downloads
+/tmp/
+
+# ignore project zip packages
+HackathonRadar.zip
+
+# ignore local XAMPP sqlite or cache files
+*.sqlite
+*.sqlite3
+
+# ignore local logs
+*.log
+
+# Keep only source files for the project
+
+# End of .gitignore
+
+# File purposely left blank for no-op effect, used to keep repo tidy.
+
+# GitHub may ignore these patterns automatically.
+
+# This repo is intentionally lightweight; no build tooling is required.
+
+# Add additional ignores below as needed.
+
+# Example: *.bak
+
+# Example: local_settings.php
+
+# Example: .env
+
+# Example: .zip
+
+# Example: .cache
+
+# Example: build/
+
+# Example: dist/
+
+# Example: vendor/
+
+# Example: node_modules/
+
+# Example: coverage/
+
+# Example: .vscode/
+
+# Example: .idea/
+
+# Example: Desktop.ini
+
+# Example: Thumbs.db
+
+# Example: __pycache__/
+
+# Example: *.sqlite
+
+# Example: *.db
+
+# Example: *.sql.gz
+
+# example keys
+# not used in project
+
+# leave trailing newline
+
